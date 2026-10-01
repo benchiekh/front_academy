@@ -1,0 +1,114 @@
+@import 'tailwindcss';
+
+/* ------------------------------------------------------------------
+   "Court" design system — ink chrome, blaze orange ball, volt accent
+   Display: Big Shoulders Display (Chicago athletic signage)
+   Body:    Barlow
+   ------------------------------------------------------------------ */
+@theme {
+  --font-sans: 'Barlow', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Big Shoulders Display', 'Barlow', ui-sans-serif, sans-serif;
+
+  --color-ink: #0e1116;
+  --color-ink-2: #171b22;
+  --color-ink-3: #232935;
+  --color-paper: #f4f2ee;
+  --color-line: #e3dfd7;
+
+  --color-blaze: #ff4d1c;
+  --color-blaze-600: #e63d0f;
+  --color-blaze-50: #fff1ec;
+  --color-volt: #c8f31d;
+  --color-volt-600: #a6cc0a;
+
+  --color-win: #15a34a;
+  --color-loss: #e11d48;
+  --color-hold: #f59e0b;
+
+  --animate-rise: rise 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-slide-in: slide-in 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes slide-in {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: none;
+    }
+  }
+}
+
+@layer base {
+  body {
+    @apply bg-paper font-sans text-ink antialiased;
+  }
+  :focus-visible {
+    outline: 3px solid var(--color-blaze);
+    outline-offset: 2px;
+  }
+  button,
+  [role='button'],
+  a {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+  svg.lucide {
+    flex-shrink: 0;
+  }
+}
+
+@utility font-display {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  line-height: 0.95;
+}
+
+/* Angled "sport cut" corners */
+@utility cut-br {
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%);
+}
+@utility cut-tl {
+  clip-path: polygon(14px 0, 100% 0, 100% 100%, 0 100%, 0 14px);
+}
+@utility skew-tag {
+  clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+}
+
+/* Handball court lines (6m & 9m arcs + centre line) */
+@utility court-bg {
+  background-color: var(--color-ink);
+  background-image:
+    radial-gradient(circle at 0% 50%, transparent 0 34%, rgb(255 255 255 / 0.07) 34% calc(34% + 2px), transparent calc(34% + 2px)),
+    radial-gradient(circle at 0% 50%, transparent 0 50%, rgb(255 255 255 / 0.05) 50% calc(50% + 2px), transparent calc(50% + 2px)),
+    radial-gradient(circle at 100% 50%, transparent 0 34%, rgb(255 255 255 / 0.07) 34% calc(34% + 2px), transparent calc(34% + 2px)),
+    radial-gradient(circle at 100% 50%, transparent 0 50%, rgb(255 255 255 / 0.05) 50% calc(50% + 2px), transparent calc(50% + 2px)),
+    linear-gradient(90deg, transparent calc(50% - 1px), rgb(255 255 255 / 0.07) calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 1px));
+}
+
+/* Diagonal speed stripes */
+@utility stripes {
+  background-image: repeating-linear-gradient(-55deg, currentColor 0 6px, transparent 6px 14px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
