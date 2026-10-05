@@ -7,7 +7,7 @@ import { formatDate, formatMoney, MONTHS, MONTHS_SHORT } from '../../lib/labels'
 import { Badge, cx, ErrorBox, Kicker, Spinner } from '../ui';
 
 export function KhalesBadge({ paid }: { paid: boolean }) {
-  return <Badge tone={paid ? 'green' : 'red'}>{paid ? 'Khalès' : 'Non khalès'}</Badge>;
+  return <Badge tone={paid ? 'green' : 'red'}>{paid ? 'Payé' : 'Non Payé'}</Badge>;
 }
 
 export default function PaymentTab({ playerId, monthlyFee, registeredAt }: { playerId: string; monthlyFee: number; registeredAt?: string }) {
@@ -46,18 +46,18 @@ export default function PaymentTab({ playerId, monthlyFee, registeredAt }: { pla
   return (
     <div className="space-y-6">
       {/* Current month — scoreboard */}
-      <div className={cx('cut-br relative overflow-hidden p-6 text-white sm:p-8', paid ? 'bg-win' : 'bg-loss')}>
+      <div className={cx('cut-br relative overflow-hidden p-4 text-white min-[400px]:p-6 sm:p-8', paid ? 'bg-win' : 'bg-loss')}>
         <span className="stripes pointer-events-none absolute inset-y-0 right-0 w-1/3 text-white/10" aria-hidden />
         <div className="relative">
           <p className="text-xs font-bold tracking-[0.2em] text-white/80 uppercase">
             Cotisation · {MONTHS[currentMonth - 1]} {currentYear}
           </p>
           <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
-            <p className="flex items-center gap-3 font-display text-6xl font-black sm:text-7xl">
-              <StatusIcon className="size-12 shrink-0 sm:size-14" strokeWidth={2.5} aria-hidden />
-              {paid ? 'Khalès' : 'Non khalès'}
+            <p className="flex items-center gap-3 font-display text-4xl font-black min-[400px]:text-5xl sm:text-7xl">
+              <StatusIcon className="size-9 shrink-0 min-[400px]:size-12 sm:size-14" strokeWidth={2.5} aria-hidden />
+              {paid ? 'payé' : 'Non payé'}
             </p>
-            <p className="font-display text-5xl font-black text-white/90">{formatMoney(current?.amount ?? monthlyFee)}</p>
+            <p className="font-display text-3xl font-black text-white/90 min-[400px]:text-4xl sm:text-5xl">{formatMoney(current?.amount ?? monthlyFee)}</p>
           </div>
           <p className="mt-3 font-medium text-white/85">
             {paid ? `Payé le ${formatDate(current?.paymentDate)} — merci !` : 'Paiement pas encore enregistré par le coach.'}
@@ -109,14 +109,14 @@ export default function PaymentTab({ playerId, monthlyFee, registeredAt }: { pla
                   ok ? 'bg-win text-white' : due ? 'border-2 border-loss/40 bg-loss/10 text-loss' : 'border-2 border-dashed border-ink/10 text-ink/30',
                   isNow && 'outline-3 outline-offset-2 outline-blaze',
                 )}
-                aria-label={`${label} ${year} : ${ok ? 'khalès' : due ? 'non khalès' : isRegistered(month) ? 'pas encore dû' : 'pas encore inscrit'}`}
+                aria-label={`${label} ${year} : ${ok ? 'Payé' : due ? 'non Payé' : isRegistered(month) ? 'pas encore dû' : 'pas encore inscrit'}`}
               >
                 <div className="flex items-start justify-between">
                   <span className="font-display text-2xl font-black">{MONTHS_SHORT[month - 1]}</span>
                   <Icon className="size-5" strokeWidth={3} aria-hidden />
                 </div>
                 <span className={cx('mt-3 text-[11px] font-bold tracking-wide uppercase', ok ? 'text-white/85' : '')}>
-                  {ok ? formatDate(payment?.paymentDate).slice(0, 5) : due ? 'Non khalès' : isRegistered(month) ? 'À venir' : '—'}
+                  {ok ? formatDate(payment?.paymentDate).slice(0, 5) : due ? 'Non Payé' : isRegistered(month) ? 'À venir' : '—'}
                 </span>
               </li>
             );

@@ -1,5 +1,5 @@
-import { CalendarDays, ClipboardList, LogOut, Wallet, type LucideIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { CalendarDays, ClipboardList, LogOut, Pencil, Wallet, type LucideIcon } from 'lucide-react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { errorMessage } from '../../api/client';
 import { playersApi } from '../../api/endpoints';
 import type { PlayerDetail } from '../../api/types';
@@ -7,7 +7,7 @@ import { Logo } from '../../components/Logo';
 import AttendanceTab from '../../components/parent/AttendanceTab';
 import PaymentTab from '../../components/parent/PaymentTab';
 import TechnicalSheetTab from '../../components/parent/TechnicalSheetTab';
-import { Badge, EmptyState, ErrorBox, JerseyAvatar, Spinner } from '../../components/ui';
+import { Badge, Button, EmptyState, ErrorBox, Field, Input, JerseyAvatar, Modal, Spinner } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 import { formatDay, POSITION_LABELS } from '../../lib/labels';
 
@@ -25,25 +25,55 @@ export default function ParentDashboard() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [tab, setTab] = useState<TabKey>('payment');
   const [error, setError] = useState<string | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({ name: '', dateOfBirth: '' });
+  const [editError, setEditError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
+  const load = () =>
     playersApi
       .mine()
       .then((list) => {
         setChildren(list);
-        setSelectedId(list[0]?._id ?? null);
+        setSelectedId((id) => id ?? list[0]?._id ?? null);
       })
       .catch((e) => setError(errorMessage(e)));
+
+  useEffect(() => {
+    load();
   }, []);
 
   const child = children?.find((c) => c._id === selectedId);
   const sheet = child?.technicalSheet;
 
+  const openEdit = () => {
+    if (!child) return;
+    setEditError(null);
+    setEditForm({ name: child.name, dateOfBirth: child.dateOfBirth.slice(0, 10) });
+    setEditOpen(true);
+  };
+
+  const saveChild = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!child) return;
+    setSaving(true);
+    setEditError(null);
+    try {
+      await playersApi.update(child._id, { name: editForm.name, dateOfBirth: editForm.dateOfBirth });
+      setEditOpen(false);
+      load();
+    } catch (err) {
+      setEditError(errorMessage(err));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="min-h-screen pb-24 sm:pb-12">
       {/* Hero */}
       <header className="court-bg relative overflow-hidden border-b-4 border-blaze text-white">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 pt-4">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 pt-4 sm:px-8">
           <Logo subtitle="Espace parent" />
           <button
             onClick={logout}
@@ -54,7 +84,7 @@ export default function ParentDashboard() {
           </button>
         </div>
 
-        <div className="mx-auto max-w-4xl px-4 pt-8 pb-6">
+        <div className="mx-auto max-w-6xl px-4 pt-8 pb-6 sm:px-8">
           <p className="text-sm text-white/50">Bonjour {user?.name},</p>
 
           {children && children.length > 1 && (
@@ -76,15 +106,25 @@ export default function ParentDashboard() {
           )}
 
           {child && (
-            <div key={child._id} className="mt-6 flex animate-rise items-end gap-4 sm:gap-6">
-              <JerseyAvatar number={sheet?.jerseyNumber} name={child.name} size="lg" />
+            <div key={child._id} className="mt-6 flex animate-rise items-end gap-3 min-[400px]:gap-4 sm:gap-6">
+              <JerseyAvatar number={sheet?.jerseyNumber} name={child.name} size="lg" className="size-16 text-4xl min-[400px]:size-20 min-[400px]:text-5xl" />
               <div className="min-w-0 pb-1">
                 <div className="mb-2 flex flex-wrap gap-2">
                   <Badge tone="volt">{child.category}</Badge>
                   {sheet?.mainPosition && <Badge tone="blaze">{POSITION_LABELS[sheet.mainPosition]}</Badge>}
                 </div>
-                <h1 className="font-display text-4xl font-black break-words sm:text-6xl">{child.name}</h1>
-                <p className="mt-1 text-sm text-white/50">
+                <div className="flex items-center gap-2">
+                  <h1 className="font-display text-3xl font-black break-words min-[400px]:text-4xl sm:text-6xl">{child.name}</h1>
+                  <button
+                    onClick={openEdit}
+                    className="flex size-11 shrink-0 items-center justify-center text-white/50 transition-colors hover:bg-white/10 hover:text-white"
+                    aria-label={`Modifier ${child.name}`}
+                    title="Modifier le nom et la date de naissance"
+                  >
+                    <Pencil className="size-5" />
+                  </button>
+                </div>
+                <p className="mt-1 text-xs text-white/50 min-[400px]:text-sm">
                   {child.age} ans · né(e) le {formatDay(child.dateOfBirth)}
                 </p>
               </div>
@@ -94,7 +134,7 @@ export default function ParentDashboard() {
 
         {/* Desktop tabs sit on the hero's bottom edge */}
         {child && (
-          <div className="mx-auto hidden max-w-4xl gap-1 px-4 sm:flex" role="tablist" aria-label="Sections">
+          <div className="mx-auto hidden max-w-6xl gap-1 px-4 sm:flex sm:px-8" role="tablist" aria-label="Sections">
             {TABS.map(({ key, label, icon: Icon }) => (
               <button
                 key={key}
@@ -113,7 +153,7 @@ export default function ParentDashboard() {
         )}
       </header>
 
-      <main className="mx-auto max-w-4xl px-4 py-6 sm:py-8">
+      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-8 sm:py-8">
         <ErrorBox message={error} />
         {!children && !error && <Spinner />}
         {children?.length === 0 && <EmptyState>Aucun enfant n'est encore lié à votre compte. Contactez le coach.</EmptyState>}
@@ -122,10 +162,32 @@ export default function ParentDashboard() {
           <div role="tabpanel" key={`${child._id}-${tab}`} className="animate-rise">
             {tab === 'payment' && <PaymentTab playerId={child._id} monthlyFee={child.monthlyFee} registeredAt={child.createdAt} />}
             {tab === 'attendance' && <AttendanceTab playerId={child._id} />}
-            {tab === 'sheet' && <TechnicalSheetTab player={child} />}
+            {tab === 'sheet' && <TechnicalSheetTab player={child} onSaved={load} />}
           </div>
         )}
       </main>
+
+      {/* Edit name & birth date — the only fields a parent may change */}
+      <Modal open={editOpen} title={`Modifier ${child?.name.split(' ')[0] ?? ''}`} onClose={() => setEditOpen(false)}>
+        <form onSubmit={saveChild} className="space-y-4">
+          <ErrorBox message={editError} />
+          <Field label="Nom complet">
+            <Input required value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
+          </Field>
+          <Field label="Date de naissance">
+            <Input type="date" required value={editForm.dateOfBirth} onChange={(e) => setEditForm({ ...editForm, dateOfBirth: e.target.value })} />
+          </Field>
+          <p className="text-xs text-ink/50">Pour toute autre modification (catégorie, cotisation…), contactez le coach.</p>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="secondary" onClick={() => setEditOpen(false)}>
+              Annuler
+            </Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? 'Enregistrement…' : 'Enregistrer'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Mobile bottom tab bar */}
       {child && (

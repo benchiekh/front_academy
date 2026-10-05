@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { errorMessage } from '../api/client';
 import { usersApi } from '../api/endpoints';
 import type { User } from '../api/types';
-import { Copy, KeyRound, Trash2, UserPlus, Users } from 'lucide-react';
+import { Copy, KeyRound, Pencil, Trash2, UserPlus, Users } from 'lucide-react';
 import { Button, DataTable, EmptyState, ErrorBox, Field, Input, Modal, PageHeader, Spinner } from './ui';
 
 const COPY = {
@@ -23,6 +23,8 @@ export default function UserManager({ role }: { role: 'parent' | 'coach' }) {
   const [resetFor, setResetFor] = useState<User | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [copied, setCopied] = useState(false);
+  const [editFor, setEditFor] = useState<User | null>(null);
+  const [editForm, setEditForm] = useState({ name: '', email: '', phone: '' });
 
   const load = () => usersApi.list(role).then(setUsers).catch((e) => setError(errorMessage(e)));
   useEffect(() => {
@@ -45,6 +47,32 @@ export default function UserManager({ role }: { role: 'parent' | 'coach' }) {
       setCopied(false);
       setOpen(false);
       setForm({ name: '', email: '', phone: '', password: '' });
+      load();
+    } catch (err) {
+      setFormError(errorMessage(err));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openEdit = (u: User) => {
+    setFormError(null);
+    setEditFor(u);
+    setEditForm({ name: u.name, email: u.email, phone: u.phone ?? '' });
+  };
+
+  const onEdit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!editFor) return;
+    setSaving(true);
+    setFormError(null);
+    try {
+      await usersApi.update(editFor._id, {
+        name: editForm.name,
+        email: editForm.email,
+        phone: editForm.phone,
+      });
+      setEditFor(null);
       load();
     } catch (err) {
       setFormError(errorMessage(err));
@@ -142,6 +170,14 @@ export default function UserManager({ role }: { role: 'parent' | 'coach' }) {
               <td className="hidden text-ink/70 sm:table-cell">{u.phone ?? '—'}</td>
               <td className="text-right whitespace-nowrap">
                 <button
+                  onClick={() => openEdit(u)}
+                  className="inline-flex size-11 items-center justify-center text-ink/50 hover:bg-volt hover:text-ink"
+                  aria-label={`Modifier ${u.name}`}
+                  title="Modifier"
+                >
+                  <Pencil className="size-5" />
+                </button>
+                <button
                   onClick={() => { setFormError(null); setResetFor(u); }}
                   className="inline-flex size-11 items-center justify-center text-ink/50 hover:bg-ink hover:text-white"
                   aria-label={`Changer le mot de passe de ${u.name}`}
@@ -184,6 +220,29 @@ export default function UserManager({ role }: { role: 'parent' | 'coach' }) {
             </Button>
             <Button type="submit" disabled={saving}>
               {saving ? 'Création…' : 'Créer le compte'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal open={!!editFor} title={`Modifier — ${editFor?.name ?? ''}`} onClose={() => setEditFor(null)}>
+        <form onSubmit={onEdit} className="space-y-4">
+          <ErrorBox message={formError} />
+          <Field label="Nom complet">
+            <Input required value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
+          </Field>
+          <Field label="Email (identifiant de connexion)">
+            <Input type="email" required value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
+          </Field>
+          <Field label="Téléphone">
+            <Input value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} />
+          </Field>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="secondary" onClick={() => setEditFor(null)}>
+              Annuler
+            </Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? 'Enregistrement…' : 'Enregistrer'}
             </Button>
           </div>
         </form>

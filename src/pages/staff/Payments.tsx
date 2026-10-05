@@ -2,9 +2,9 @@ import { CalendarDays, Check, ChevronLeft, ChevronRight, CreditCard, Grid3x3, Mi
 import { useEffect, useMemo, useState } from 'react';
 import { errorMessage } from '../../api/client';
 import { paymentsApi } from '../../api/endpoints';
-import { CATEGORIES, type PaymentGridRow, type PaymentStatus, type PaymentYearRow } from '../../api/types';
+import { CATEGORIES, type Payment, type PaymentGridRow, type PaymentStatus, type PaymentYearRow } from '../../api/types';
 import { KhalesBadge } from '../../components/parent/PaymentTab';
-import { cx, EmptyState, ErrorBox, Input, MonthPicker, PageHeader, Select, Spinner, StatTile } from '../../components/ui';
+import { Button, cx, EmptyState, ErrorBox, Field, Input, Modal, MonthPicker, PageHeader, Select, Spinner, StatTile } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 import { formatDate, formatMoney, MONTHS, MONTHS_SHORT } from '../../lib/labels';
 
@@ -20,7 +20,7 @@ export default function PaymentsPage() {
       <PageHeader
         kicker="Cotisations"
         title="Paiements"
-        subtitle="Consultez qui est khalès, mois par mois."
+        subtitle="Consultez qui est Payé, mois par mois."
         actions={
           <>
             <div className="inline-flex bg-ink p-1" role="tablist" aria-label="Affichage">
@@ -66,6 +66,7 @@ type Filter = 'all' | 'paid' | 'unpaid';
 
 function MonthView({ category }: { category: string }) {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year, setYear] = useState(now.getFullYear());
@@ -84,18 +85,21 @@ function MonthView({ category }: { category: string }) {
       .catch((e) => setError(errorMessage(e)));
   }, [month, year, category]);
 
-  const toggle = async (row: PaymentGridRow) => {
-    const status: PaymentStatus = row.status === 'paid' ? 'unpaid' : 'paid';
+  const applySaved = (playerId: string, saved: Payment) =>
+    setRows((r) =>
+      r?.map((p) =>
+        p.playerId === playerId
+          ? { ...p, status: saved.status, amount: saved.amount, paymentDate: saved.paymentDate ?? null, markedByName: user?.name ?? null }
+          : p,
+      ) ?? null,
+    );
+
+  /** One click pays with the row's amount (default = monthly fee, editable inline for exceptions). */
+  const save = async (row: PaymentGridRow, status: PaymentStatus, amount: number) => {
     setBusy(row.playerId);
     try {
-      const saved = await paymentsApi.upsert({ playerId: row.playerId, month, year, status, amount: row.amount });
-      setRows((r) =>
-        r?.map((p) =>
-          p.playerId === row.playerId
-            ? { ...p, status: saved.status, paymentDate: saved.paymentDate ?? null, markedByName: user?.name ?? null }
-            : p,
-        ) ?? null,
-      );
+      const saved = await paymentsApi.upsert({ playerId: row.playerId, month, year, status, amount });
+      applySaved(row.playerId, saved);
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -114,8 +118,8 @@ function MonthView({ category }: { category: string }) {
 
   const FILTERS: { key: Filter; label: string; tone: string }[] = [
     { key: 'all', label: 'Tous', tone: 'bg-ink text-white' },
-    { key: 'paid', label: 'Khalès', tone: 'bg-win text-white' },
-    { key: 'unpaid', label: 'Non khalès', tone: 'bg-loss text-white' },
+    { key: 'paid', label: 'Payé', tone: 'bg-win text-white' },
+    { key: 'unpaid', label: 'Non Payé', tone: 'bg-loss text-white' },
   ];
 
   return (
@@ -129,11 +133,13 @@ function MonthView({ category }: { category: string }) {
 
       {rows && rows.length > 0 && (
         <>
-          <div className="mb-6 grid grid-cols-3 gap-3">
-            <StatTile label="Khalès" value={`${counts.paid}/${counts.all}`} tone="win" />
-            <StatTile label="Encaissé" value={formatMoney(collected)} tone="ink" hint={`sur ${formatMoney(expected)}`} />
-            <StatTile label="Reste" value={formatMoney(expected - collected)} tone="loss" />
-          </div>
+          {isAdmin && (
+            <div className="mb-6 grid grid-cols-3 gap-3">
+              <StatTile label="Payé" value={`${counts.paid}/${counts.all}`} tone="win" />
+              <StatTile label="Encaissé" value={formatMoney(collected)} tone="ink" hint={`sur ${formatMoney(expected)}`} />
+              <StatTile label="Reste" value={formatMoney(expected - collected)} tone="loss" />
+            </div>
+          )}
 
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex gap-1.5" role="radiogroup" aria-label="Filtrer par statut">
@@ -149,7 +155,9 @@ function MonthView({ category }: { category: string }) {
                   )}
                 >
                   {f.label}
-                  <span className={cx('font-display text-lg', filter === f.key ? 'opacity-80' : 'text-ink/40')}>{counts[f.key]}</span>
+                  {isAdmin && (
+                    <span className={cx('font-display text-lg', filter === f.key ? 'opacity-80' : 'text-ink/40')}>{counts[f.key]}</span>
+                  )}
                 </button>
               ))}
             </div>
@@ -184,23 +192,7 @@ function MonthView({ category }: { category: string }) {
                     <span className="hidden sm:inline">
                       <KhalesBadge paid={isPaid} />
                     </span>
-                    <button
-                      role="switch"
-                      aria-checked={isPaid}
-                      aria-label={`${r.name} : ${isPaid ? 'khalès' : 'non khalès'}`}
-                      disabled={busy === r.playerId}
-                      onClick={() => toggle(r)}
-                      className={cx('relative h-9 w-16 shrink-0 transition-colors disabled:opacity-50', isPaid ? 'bg-win' : 'bg-ink/20')}
-                    >
-                      <span
-                        className={cx(
-                          'absolute top-1 flex size-7 items-center justify-center bg-white shadow transition-all duration-200',
-                          isPaid ? 'left-8 text-win' : 'left-1 text-ink/40',
-                        )}
-                      >
-                        {isPaid ? <Check className="size-4" strokeWidth={3} /> : <Minus className="size-4" />}
-                      </span>
-                    </button>
+                    <PayCell row={r} busy={busy === r.playerId} onSave={(status, amount) => save(r, status, amount)} />
                   </li>
                 );
               })}
@@ -218,11 +210,13 @@ function MonthView({ category }: { category: string }) {
 
 function YearView({ category }: { category: string }) {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [rows, setRows] = useState<PaymentYearRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [payTarget, setPayTarget] = useState<{ row: PaymentYearRow; monthIdx: number } | null>(null);
 
   useEffect(() => {
     setRows(null);
@@ -240,9 +234,29 @@ function YearView({ category }: { category: string }) {
   const owes = (r: PaymentYearRow, m: number) => isDue(m) && isRegistered(r, m);
   const isCurrent = (m: number) => year === now.getFullYear() && m === now.getMonth() + 1;
 
+  const applySaved = (playerId: string, monthIdx: number, saved: Payment) =>
+    setRows((rs) =>
+      rs?.map((r) =>
+        r.playerId !== playerId
+          ? r
+          : {
+              ...r,
+              months: r.months.map((c, i) =>
+                i === monthIdx
+                  ? { status: saved.status, amount: saved.amount, paymentDate: saved.paymentDate ?? null, markedByName: user?.name ?? '' }
+                  : c,
+              ),
+            },
+      ) ?? null,
+    );
+
+  /** Marking unpaid is immediate; marking paid first asks for the amount actually received. */
   const toggle = async (row: PaymentYearRow, monthIdx: number) => {
     const cell = row.months[monthIdx];
-    const status: PaymentStatus = cell?.status === 'paid' ? 'unpaid' : 'paid';
+    if (cell?.status !== 'paid') {
+      setPayTarget({ row, monthIdx });
+      return;
+    }
     const k = `${row.playerId}-${monthIdx}`;
     setBusy(k);
     try {
@@ -250,23 +264,32 @@ function YearView({ category }: { category: string }) {
         playerId: row.playerId,
         month: monthIdx + 1,
         year,
-        status,
-        amount: cell?.amount ?? row.monthlyFee,
+        status: 'unpaid',
+        amount: cell.amount,
       });
-      setRows((rs) =>
-        rs?.map((r) =>
-          r.playerId !== row.playerId
-            ? r
-            : {
-                ...r,
-                months: r.months.map((c, i) =>
-                  i === monthIdx
-                    ? { status: saved.status, amount: saved.amount, paymentDate: saved.paymentDate ?? null, markedByName: user?.name ?? '' }
-                    : c,
-                ),
-              },
-        ) ?? null,
-      );
+      applySaved(row.playerId, monthIdx, saved);
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const confirmPay = async (amount: number) => {
+    if (!payTarget) return;
+    const { row, monthIdx } = payTarget;
+    const k = `${row.playerId}-${monthIdx}`;
+    setBusy(k);
+    try {
+      const saved = await paymentsApi.upsert({
+        playerId: row.playerId,
+        month: monthIdx + 1,
+        year,
+        status: 'paid',
+        amount,
+      });
+      applySaved(row.playerId, monthIdx, saved);
+      setPayTarget(null);
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -321,11 +344,26 @@ function YearView({ category }: { category: string }) {
 
       {rows && rows.length > 0 && (
         <>
-          <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <StatTile label={`Encaissé ${year}`} value={formatMoney(totals.collected)} tone="win" />
-            <StatTile label="Mois impayés" value={totals.lateCells} tone="loss" hint="tous joueurs confondus" />
-            <StatTile label="Joueurs" value={rows.length} tone="ink" className="col-span-2 sm:col-span-1" />
+          <div className={cx('mb-6 grid gap-3', isAdmin ? 'grid-cols-2 sm:grid-cols-3' : 'max-w-xs grid-cols-1')}>
+            {isAdmin && <StatTile label={`Encaissé ${year}`} value={formatMoney(totals.collected)} tone="win" />}
+            {isAdmin && <StatTile label="Mois impayés" value={totals.lateCells} tone="loss" hint="tous joueurs confondus" />}
+            <StatTile label="Joueurs" value={rows.length} tone="ink" className={isAdmin ? 'col-span-2 sm:col-span-1' : ''} />
           </div>
+
+          <AmountModal
+            target={
+              payTarget
+                ? {
+                    name: payTarget.row.name,
+                    monthLabel: `${MONTHS[payTarget.monthIdx]} ${year}`,
+                    amount: payTarget.row.months[payTarget.monthIdx]?.amount ?? payTarget.row.monthlyFee,
+                  }
+                : null
+            }
+            busy={busy === `${payTarget?.row.playerId}-${payTarget?.monthIdx}`}
+            onClose={() => setPayTarget(null)}
+            onConfirm={confirmPay}
+          />
 
           <p className="mb-2 text-xs text-ink/50 sm:hidden">← Faites glisser le tableau pour voir tous les mois →</p>
           <div className="overflow-x-auto border-2 border-ink/10 bg-white">
@@ -369,7 +407,7 @@ function YearView({ category }: { category: string }) {
                               cell?.status === 'paid'
                                 ? `Payé le ${formatDate(cell.paymentDate)} · ${formatMoney(cell.amount)} · par ${cell.markedByName}`
                                 : cell
-                                  ? `Non khalès · modifié par ${cell.markedByName}`
+                                  ? `Non Payé · modifié par ${cell.markedByName}`
                                   : undefined
                             }
                             onClick={() => toggle(r, i)}
@@ -384,23 +422,25 @@ function YearView({ category }: { category: string }) {
                   );
                 })}
               </tbody>
-              <tfoot>
-                <tr className="border-t-4 border-ink bg-paper">
-                  <th scope="row" className="sticky left-0 z-10 bg-paper px-4 py-3 text-left text-xs font-bold tracking-wider text-ink/60 uppercase">
-                    Encaissé
-                  </th>
-                  {totals.perMonth.map((t, i) => (
-                    <td key={i} className={cx('px-1 py-3 text-center', isCurrent(i + 1) && 'bg-blaze-50')}>
-                      <span className="block font-display text-base font-black">{t.amount || '—'}</span>
-                      <span className="text-[10px] font-bold text-ink/40">{t.count ? `${t.count} pay.` : ''}</span>
-                    </td>
-                  ))}
-                  <td className="px-3 py-3 text-center font-display text-lg font-black whitespace-nowrap text-win">{formatMoney(totals.collected)}</td>
-                </tr>
-              </tfoot>
+              {isAdmin && (
+                <tfoot>
+                  <tr className="border-t-4 border-ink bg-paper">
+                    <th scope="row" className="sticky left-0 z-10 bg-paper px-4 py-3 text-left text-xs font-bold tracking-wider text-ink/60 uppercase">
+                      Encaissé
+                    </th>
+                    {totals.perMonth.map((t, i) => (
+                      <td key={i} className={cx('px-1 py-3 text-center', isCurrent(i + 1) && 'bg-blaze-50')}>
+                        <span className="block font-display text-base font-black">{t.amount || '—'}</span>
+                        <span className="text-[10px] font-bold text-ink/40">{t.count ? `${t.count} pay.` : ''}</span>
+                      </td>
+                    ))}
+                    <td className="px-3 py-3 text-center font-display text-lg font-black whitespace-nowrap text-win">{formatMoney(totals.collected)}</td>
+                  </tr>
+                </tfoot>
+              )}
             </table>
           </div>
-          <p className="mt-3 text-xs text-ink/50">Cliquez sur une case pour la passer en khalès / non khalès.</p>
+          <p className="mt-3 text-xs text-ink/50">Cliquez sur une case pour la passer en Payé / non Payé.</p>
         </>
       )}
     </>
@@ -421,12 +461,105 @@ function Cell({ paid, due, registered, busy, label, title, onClick }: { paid: bo
       onClick={onClick}
       disabled={busy}
       aria-pressed={paid}
-      aria-label={`${label} : ${paid ? 'khalès' : due ? 'non khalès' : idle.toLowerCase()}`}
-      title={title ?? (paid ? 'Khalès' : due ? 'Non khalès' : idle)}
+      aria-label={`${label} : ${paid ? 'Payé' : due ? 'non Payé' : idle.toLowerCase()}`}
+      title={title ?? (paid ? 'Payé' : due ? 'Non Payé' : idle)}
       className={cx('mx-auto flex size-10 items-center justify-center transition-colors disabled:animate-pulse', styles)}
     >
       <Icon className="size-5" strokeWidth={paid ? 3 : 2.5} aria-hidden />
     </button>
+  );
+}
+
+/** Inline amount + paid switch: one click pays with the shown amount (default = monthly fee); edit the amount first for exceptions (e.g. 30 DT on a 35 DT fee). */
+function PayCell({ row, busy, onSave }: { row: PaymentGridRow; busy: boolean; onSave: (status: PaymentStatus, amount: number) => void }) {
+  const isPaid = row.status === 'paid';
+  const [amount, setAmount] = useState(String(row.amount));
+  useEffect(() => setAmount(String(row.amount)), [row.amount, row.playerId]);
+
+  const pay = () => {
+    const a = amount === '' ? row.amount : Number(amount);
+    if (Number.isFinite(a) && a >= 0) onSave('paid', a);
+  };
+
+  return (
+    <div className="flex shrink-0 items-center gap-2">
+      {!isPaid && (
+        <Input
+          type="number"
+          min={0}
+          step="0.5"
+          inputMode="decimal"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          className="!min-h-9 w-20 px-2 text-center font-semibold sm:w-24"
+          aria-label={`Montant reçu pour ${row.name} (DT)`}
+          title="Montant reçu (DT) — modifiez-le si le joueur paie moins"
+        />
+      )}
+      <button
+        role="switch"
+        aria-checked={isPaid}
+        aria-label={`${row.name} : ${isPaid ? 'Payé' : 'non Payé'}`}
+        disabled={busy}
+        onClick={() => (isPaid ? onSave('unpaid', row.amount) : pay())}
+        className={cx('relative h-9 w-16 shrink-0 transition-colors disabled:opacity-50', isPaid ? 'bg-win' : 'bg-ink/20')}
+      >
+        <span
+          className={cx(
+            'absolute top-1 flex size-7 items-center justify-center bg-white shadow transition-all duration-200',
+            isPaid ? 'left-8 text-win' : 'left-1 text-ink/40',
+          )}
+        >
+          {isPaid ? <Check className="size-4" strokeWidth={3} /> : <Minus className="size-4" />}
+        </span>
+      </button>
+    </div>
+  );
+}
+
+/** Asks for the amount actually received before marking a month as paid — supports partial payments (e.g. 30 DT on a 35 DT fee). */
+function AmountModal({
+  target,
+  busy,
+  onClose,
+  onConfirm,
+}: {
+  target: { name: string; monthLabel: string; amount: number } | null;
+  busy: boolean;
+  onClose: () => void;
+  onConfirm: (amount: number) => void;
+}) {
+  const [amount, setAmount] = useState('');
+  useEffect(() => {
+    setAmount(target ? String(target.amount) : '');
+  }, [target]);
+
+  return (
+    <Modal open={!!target} title="Marquer Payé" onClose={onClose}>
+      <form
+        className="space-y-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const a = Number(amount);
+          if (amount !== '' && Number.isFinite(a) && a >= 0) onConfirm(a);
+        }}
+      >
+        <p className="text-sm text-ink/60">
+          <strong className="text-ink">{target?.name}</strong> · {target?.monthLabel}
+        </p>
+        <Field label="Montant reçu (DT)" hint="Si le joueur paie moins que la cotisation, saisissez le montant réellement reçu.">
+          <Input type="number" min={0} step="0.5" required autoFocus value={amount} onChange={(e) => setAmount(e.target.value)} />
+        </Field>
+        <div className="flex justify-end gap-2 pt-2">
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Annuler
+          </Button>
+          <Button type="submit" disabled={busy}>
+            {busy ? 'Enregistrement…' : 'Marquer Payé'}
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 
@@ -437,13 +570,13 @@ function Legend() {
         <span className="flex size-5 items-center justify-center bg-win text-white">
           <Check className="size-3" strokeWidth={3} />
         </span>
-        Khalès
+        Payé
       </span>
       <span className="flex items-center gap-1.5">
         <span className="flex size-5 items-center justify-center bg-loss/15 text-loss">
           <X className="size-3" strokeWidth={3} />
         </span>
-        Non khalès
+        Non Payé
       </span>
       <span className="flex items-center gap-1.5">
         <span className="flex size-5 items-center justify-center bg-paper text-ink/30 ring-1 ring-ink/10">

@@ -73,7 +73,7 @@ export default function PlayerForm({
         </Select>
       </Field>
       <Field label="Cotisation mensuelle (DT)">
-        <Input type="number" min={0} step="0.5" value={form.monthlyFee} onChange={(e) => setForm({ ...form, monthlyFee: Number(e.target.value) })} />
+        <Input type="number" min={30} step="5" value={form.monthlyFee} onChange={(e) => setForm({ ...form, monthlyFee: Number(e.target.value) })} />
       </Field>
       <div className="flex justify-end gap-2 pt-2">
         <Button type="button" variant="secondary" onClick={onCancel}>

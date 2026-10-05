@@ -1,4 +1,4 @@
-import { ArrowUpRight, Banknote, ClipboardCheck, CreditCard, Gauge, Shirt, TrendingDown, UserPlus, Users } from 'lucide-react';
+import { ArrowUpRight, Banknote, ClipboardCheck, CreditCard, Gauge, Shirt, TrendingDown, UserPlus, Users, type LucideIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { errorMessage } from '../../api/client';
@@ -8,15 +8,34 @@ import { ErrorBox, Kicker, MonthPicker, PageHeader, Spinner, StatTile } from '..
 import { useAuth } from '../../context/AuthContext';
 import { formatMoney, MONTHS, MONTHS_SHORT } from '../../lib/labels';
 
-const QUICK_ACTIONS = [
+const QUICK_ACTIONS: { to: string; label: string; hint: string; icon: LucideIcon }[] = [
   { to: '/attendance', label: "Faire l'appel", hint: 'Séance du jour', icon: ClipboardCheck },
   { to: '/payments', label: 'Paiements', hint: 'Marquer les cotisations', icon: CreditCard },
   { to: '/players', label: 'Joueurs', hint: 'Fiches techniques', icon: Shirt },
   { to: '/parents', label: 'Compte parent', hint: 'Créer des accès', icon: UserPlus },
 ];
 
+function QuickAction({ to, label, hint, icon: Icon }: (typeof QUICK_ACTIONS)[number]) {
+  return (
+    <Link
+      to={to}
+      className="group relative flex min-h-16 items-center gap-3 border-2 border-ink/10 bg-white p-4 transition-all hover:border-ink hover:bg-ink hover:text-white"
+    >
+      <span className="flex size-10 shrink-0 items-center justify-center bg-blaze text-white">
+        <Icon className="size-5" aria-hidden />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block font-display text-xl leading-none font-extrabold">{label}</span>
+        <span className="mt-1 hidden text-xs text-ink/50 group-hover:text-white/60 sm:block">{hint}</span>
+      </span>
+      <ArrowUpRight className="size-5 shrink-0 opacity-30 transition-opacity group-hover:text-volt group-hover:opacity-100" aria-hidden />
+    </Link>
+  );
+}
+
 export default function Dashboard() {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year, setYear] = useState(now.getFullYear());
@@ -24,9 +43,26 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!isAdmin) return; // club finances are admin-only
     setStats(null);
     paymentsApi.stats(month, year).then(setStats).catch((e) => setError(errorMessage(e)));
-  }, [month, year]);
+  }, [month, year, isAdmin]);
+
+  const firstName = user?.name.split(' ').pop() ?? '';
+
+  // Coach view: daily tools only — no club money figures.
+  if (!isAdmin) {
+    return (
+      <>
+        <PageHeader kicker="Espace coach" title={`Salut ${firstName}`} subtitle="Vos outils du quotidien, en un coup d'œil." />
+        <div className="grid animate-rise grid-cols-1 gap-3 sm:grid-cols-2">
+          {QUICK_ACTIONS.map((a) => (
+            <QuickAction key={a.to} {...a} />
+          ))}
+        </div>
+      </>
+    );
+  }
 
   const maxTrend = Math.max(1, ...(stats?.trend.map((t) => t.collected) ?? [1]));
 
@@ -34,7 +70,7 @@ export default function Dashboard() {
     <>
       <PageHeader
         kicker="Vue d'ensemble du club"
-        title={`Salut ${user?.name.split(' ').pop() ?? ''}`}
+        title={`Salut ${firstName}`}
         subtitle="Les chiffres du mois, en un coup d'œil."
         actions={<MonthPicker month={month} year={year} labels={MONTHS} onChange={(m, y) => { setMonth(m); setYear(y); }} />}
       />
@@ -61,7 +97,7 @@ export default function Dashboard() {
                   {stats.paidCount}
                   <span className="text-white/30">/{stats.activePlayers}</span>
                 </p>
-                <p className="text-xs font-bold tracking-wider text-white/50 uppercase">Joueurs khalès</p>
+                <p className="text-xs font-bold tracking-wider text-white/50 uppercase">Joueurs Payé</p>
               </div>
             </div>
           </div>
@@ -69,7 +105,7 @@ export default function Dashboard() {
           <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
             <StatTile label="Encaissé" value={formatMoney(stats.collected)} tone="win" icon={<Banknote className="size-5" />} hint={`sur ${formatMoney(stats.expected)}`} />
             <StatTile label="Reste à encaisser" value={formatMoney(stats.outstanding)} tone="loss" icon={<TrendingDown className="size-5" />} />
-            <StatTile label="Non khalès" value={stats.unpaidCount} tone="hold" icon={<Users className="size-5" />} hint="joueurs à relancer" />
+            <StatTile label="Non Payé" value={stats.unpaidCount} tone="hold" icon={<Users className="size-5" />} hint="joueurs à relancer" />
             <StatTile label="Joueurs actifs" value={stats.activePlayers} tone="blaze" icon={<Gauge className="size-5" />} />
           </div>
 
@@ -102,21 +138,8 @@ export default function Dashboard() {
             <section>
               <Kicker className="mb-3">Actions rapides</Kicker>
               <div className="grid grid-cols-2 gap-3 lg:grid-cols-1">
-                {QUICK_ACTIONS.map(({ to, label, hint, icon: Icon }) => (
-                  <Link
-                    key={to}
-                    to={to}
-                    className="group relative flex min-h-16 items-center gap-3 border-2 border-ink/10 bg-white p-4 transition-all hover:border-ink hover:bg-ink hover:text-white"
-                  >
-                    <span className="flex size-10 shrink-0 items-center justify-center bg-blaze text-white">
-                      <Icon className="size-5" aria-hidden />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block font-display text-xl leading-none font-extrabold">{label}</span>
-                      <span className="mt-1 hidden text-xs text-ink/50 group-hover:text-white/60 sm:block">{hint}</span>
-                    </span>
-                    <ArrowUpRight className="size-5 shrink-0 opacity-30 transition-opacity group-hover:text-volt group-hover:opacity-100" aria-hidden />
-                  </Link>
+                {QUICK_ACTIONS.map((a) => (
+                  <QuickAction key={a.to} {...a} />
                 ))}
               </div>
             </section>

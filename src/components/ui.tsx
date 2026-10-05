@@ -133,10 +133,10 @@ export function StatTile({
 }
 
 /** Jersey-number avatar with stripes. Falls back to the initial. */
-export function JerseyAvatar({ number, name, size = 'md' }: { number?: number; name: string; size?: 'md' | 'lg' }) {
+export function JerseyAvatar({ number, name, size = 'md', className }: { number?: number; name: string; size?: 'md' | 'lg'; className?: string }) {
   const dims = size === 'lg' ? 'size-20 text-5xl' : 'size-14 text-3xl';
   return (
-    <div className={cx('cut-br relative flex shrink-0 items-center justify-center overflow-hidden bg-blaze font-display font-black text-white', dims)} aria-hidden>
+    <div className={cx('cut-br relative flex shrink-0 items-center justify-center overflow-hidden bg-blaze font-display font-black text-white', dims, className)} aria-hidden>
       <span className="stripes absolute inset-0 text-white/10" />
       <span className="relative">{number ?? name.charAt(0)}</span>
     </div>

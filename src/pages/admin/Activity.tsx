@@ -22,8 +22,8 @@ import { MONTHS } from '../../lib/labels';
 
 const ACTION_STYLE: Record<ActivityAction, { icon: LucideIcon; box: string; label: string; tone: Tone }> = {
   'attendance.mark': { icon: ClipboardCheck, box: 'bg-blaze text-white', label: 'Appel', tone: 'blaze' },
-  'payment.paid': { icon: Banknote, box: 'bg-win text-white', label: 'Khalès', tone: 'green' },
-  'payment.unpaid': { icon: Undo2, box: 'bg-loss text-white', label: 'Non khalès', tone: 'red' },
+  'payment.paid': { icon: Banknote, box: 'bg-win text-white', label: 'Payé', tone: 'green' },
+  'payment.unpaid': { icon: Undo2, box: 'bg-loss text-white', label: 'Non Payé', tone: 'red' },
   'sheet.update': { icon: ClipboardList, box: 'bg-ink text-white', label: 'Fiche', tone: 'ink' },
   'player.create': { icon: UserPlus, box: 'bg-volt text-ink', label: 'Joueur', tone: 'volt' },
   'player.update': { icon: Pencil, box: 'bg-ink/10 text-ink', label: 'Joueur', tone: 'slate' },
@@ -37,7 +37,7 @@ const TYPE_FILTERS = [
   { value: '', label: 'Toutes les actions' },
   { value: 'attendance', label: 'Appels (présences)' },
   { value: 'payment', label: 'Paiements' },
-  { value: 'payment.unpaid', label: 'Paiements annulés (non khalès)' },
+  { value: 'payment.unpaid', label: 'Paiements annulés (non Payé)' },
   { value: 'sheet', label: 'Fiches techniques' },
   { value: 'player', label: 'Joueurs' },
   { value: 'user', label: 'Comptes' },
@@ -165,7 +165,7 @@ export default function ActivityPage() {
                   <dl className="mt-4 grid grid-cols-4 gap-2 border-t border-ink/10 pt-3 text-center">
                     {[
                       ['Appels', s.attendance, 'text-blaze'],
-                      ['Khalès', s.paid, 'text-win'],
+                      ['Payé', s.paid, 'text-win'],
                       ['Annulés', s.unpaid, 'text-loss'],
                       ['Fiches', s.sheets, 'text-ink'],
                     ].map(([label, value, tone]) => (
