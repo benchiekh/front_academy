@@ -2,7 +2,8 @@ import { ArrowRight, Lock, Mail } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { errorMessage } from '../api/client';
-import { BallMark, Logo } from '../components/Logo';
+import { Logo } from '../components/Logo';
+import ScheduleCard from '../components/ScheduleCard';
 import { Button, ErrorBox, Field, Input, Kicker } from '../components/ui';
 import { homeFor, useAuth } from '../context/AuthContext';
 
@@ -30,38 +31,18 @@ export default function Login() {
 
   return (
     <div className="grid min-h-screen lg:grid-cols-[1.15fr_1fr]">
-      {/* Court side */}
-      <section className="court-bg relative flex flex-col justify-between overflow-hidden px-6 py-8 sm:px-10 lg:py-12">
-        <Logo subtitle="Club de formation" />
+      {/* Court side — team photo + weekly program over it */}
+      <section className="relative flex min-h-[55vh] flex-col overflow-hidden px-6 py-6 sm:px-10 lg:min-h-0 lg:py-12">
+        <img src="/login-bg.jpg" alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-b from-ink/60 via-ink/20 to-ink/65" aria-hidden />
 
-        <div className="relative z-10 my-8 animate-rise lg:my-0">
-          <Kicker className="mb-4 text-volt [&>span]:bg-volt">Saison 2026 · 2027</Kicker>
-          <h1 className="font-display text-[clamp(2.75rem,13vw,4.5rem)] lg:text-[clamp(4rem,7vw,7.5rem)] font-black text-white">
-            Jouer.
-            <br />
-            <span className="text-blaze">Progresser.</span>
-            <br />
-            Gagner.
-          </h1>
-          <p className="mt-6 hidden max-w-md text-lg text-white/60 sm:block">
-            Présences, cotisations et fiches techniques de vos joueurs — tout le club au même endroit.
-          </p>
+        <div className="relative z-10">
+          <Logo subtitle="Club de formation" />
         </div>
 
-        <div className="hidden gap-8 text-white lg:flex">
-          {[
-            ['7', 'joueurs sur le terrain'],
-            ['60′', 'de match'],
-            ['1', 'seule équipe'],
-          ].map(([n, l]) => (
-            <div key={l}>
-              <p className="font-display text-5xl font-black text-volt">{n}</p>
-              <p className="text-xs font-semibold tracking-wider text-white/50 uppercase">{l}</p>
-            </div>
-          ))}
+        <div className="relative z-10 flex flex-1 items-center py-6">
+          <ScheduleCard variant="glass" className="max-h-[50vh] w-full max-w-xl overflow-y-auto lg:max-h-[60vh]" />
         </div>
-
-        <BallMark className="pointer-events-none absolute -right-24 -bottom-24 size-96 rotate-12 opacity-[0.08] lg:opacity-15" />
       </section>
 
       {/* Form side */}

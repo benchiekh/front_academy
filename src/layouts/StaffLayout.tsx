@@ -1,4 +1,4 @@
-import { ClipboardCheck, CreditCard, History, LayoutDashboard, LogOut, Menu, Shirt, UserCog, Users, X } from 'lucide-react';
+import { ClipboardCheck, CreditCard, History, LayoutDashboard, LogOut, Megaphone, Menu, Shirt, UserCog, Users, X } from 'lucide-react';
 import { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { Logo } from '../components/Logo';
@@ -10,6 +10,7 @@ const NAV = [
   { to: '/attendance', label: 'Présences', icon: ClipboardCheck },
   { to: '/payments', label: 'Paiements', icon: CreditCard },
   { to: '/parents', label: 'Parents', icon: Users },
+  { to: '/schedule', label: 'Programme', icon: Megaphone, adminOnly: true },
   { to: '/coaches', label: 'Coachs', icon: UserCog, adminOnly: true },
   { to: '/activity', label: 'Traçabilité', icon: History, adminOnly: true },
 ];

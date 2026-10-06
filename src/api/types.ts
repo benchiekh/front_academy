@@ -173,3 +173,9 @@ export interface ActivitySummaryRow {
   total: number;
   lastAt: string | null;
 }
+
+/** Weekly training program published by the admin (free text, may be Arabic/RTL). */
+export interface Schedule {
+  content: string;
+  updatedAt?: string;
+}

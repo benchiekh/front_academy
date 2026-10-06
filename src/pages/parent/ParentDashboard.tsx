@@ -4,6 +4,7 @@ import { errorMessage } from '../../api/client';
 import { playersApi } from '../../api/endpoints';
 import type { PlayerDetail } from '../../api/types';
 import { Logo } from '../../components/Logo';
+import ScheduleCard from '../../components/ScheduleCard';
 import AttendanceTab from '../../components/parent/AttendanceTab';
 import PaymentTab from '../../components/parent/PaymentTab';
 import TechnicalSheetTab from '../../components/parent/TechnicalSheetTab';
@@ -155,6 +156,7 @@ export default function ParentDashboard() {
 
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-8 sm:py-8">
         <ErrorBox message={error} />
+        <ScheduleCard className="mb-6" />
         {!children && !error && <Spinner />}
         {children?.length === 0 && <EmptyState>Aucun enfant n'est encore lié à votre compte. Contactez le coach.</EmptyState>}
 

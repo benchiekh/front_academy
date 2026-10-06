@@ -3,6 +3,7 @@ import { homeFor, useAuth } from './context/AuthContext';
 import StaffLayout from './layouts/StaffLayout';
 import ActivityPage from './pages/admin/Activity';
 import Coaches from './pages/admin/Coaches';
+import SchedulePage from './pages/admin/Schedule';
 import Login from './pages/Login';
 import ParentDashboard from './pages/parent/ParentDashboard';
 import AttendancePage from './pages/staff/Attendance';
@@ -46,6 +47,14 @@ export default function App() {
           element={
             <ProtectedRoute roles={['admin']}>
               <Coaches />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/schedule"
+          element={
+            <ProtectedRoute roles={['admin']}>
+              <SchedulePage />
             </ProtectedRoute>
           }
         />

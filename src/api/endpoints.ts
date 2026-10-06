@@ -13,6 +13,7 @@ import type {
   PlayerDetail,
   Role,
   RollCallRow,
+  Schedule,
   TechnicalSheet,
   User,
 } from './types';
@@ -96,6 +97,12 @@ export const paymentsApi = {
     amount?: number;
     paymentDate?: string;
   }) => api.put<Payment>('/payments', data).then((r) => r.data),
+};
+
+export const scheduleApi = {
+  /** Public — no token needed (login page). */
+  get: () => api.get<Schedule>('/schedule').then((r) => r.data),
+  update: (content: string) => api.put<Schedule>('/schedule', { content }).then((r) => r.data),
 };
 
 export interface ActivityQuery {
