@@ -1,4 +1,4 @@
-import { AlertTriangle, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { AlertTriangle, ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react';
 
 export const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ');
@@ -67,6 +67,33 @@ export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
 
 export function Textarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return <textarea {...props} className={cx(inputClass, 'leading-relaxed', props.className)} />;
+}
+
+/** Live name filter for the player/parent lists. */
+export function SearchInput({
+  value,
+  onChange,
+  placeholder,
+  className,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+  className?: string;
+}) {
+  return (
+    <div className={cx('relative w-full sm:w-64 sm:shrink-0', className)}>
+      <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-ink/35" aria-hidden />
+      <Input
+        type="search"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        aria-label={placeholder}
+        className="pl-9"
+      />
+    </div>
+  );
 }
 
 export type Tone = 'green' | 'red' | 'amber' | 'slate' | 'blaze' | 'volt' | 'ink';

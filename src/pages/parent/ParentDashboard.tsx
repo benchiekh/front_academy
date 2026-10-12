@@ -10,7 +10,7 @@ import PaymentTab from '../../components/parent/PaymentTab';
 import TechnicalSheetTab from '../../components/parent/TechnicalSheetTab';
 import { Badge, Button, EmptyState, ErrorBox, Field, Input, JerseyAvatar, Modal, Spinner } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
-import { formatDay, POSITION_LABELS } from '../../lib/labels';
+import { byName, formatDay, POSITION_LABELS } from '../../lib/labels';
 
 const TABS: { key: 'payment' | 'attendance' | 'sheet'; label: string; icon: LucideIcon }[] = [
   { key: 'payment', label: 'Paiement', icon: Wallet },
@@ -35,8 +35,9 @@ export default function ParentDashboard() {
     playersApi
       .mine()
       .then((list) => {
-        setChildren(list);
-        setSelectedId((id) => id ?? list[0]?._id ?? null);
+        const kids = [...list].sort(byName);
+        setChildren(kids);
+        setSelectedId((id) => id ?? kids[0]?._id ?? null);
       })
       .catch((e) => setError(errorMessage(e)));
 

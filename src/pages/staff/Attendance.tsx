@@ -3,9 +3,9 @@ import { useEffect, useState } from 'react';
 import { errorMessage } from '../../api/client';
 import { attendanceApi } from '../../api/endpoints';
 import { CATEGORIES, type AttendanceStatus, type RollCallRow } from '../../api/types';
-import { Button, EmptyState, ErrorBox, Input, PageHeader, Select, Spinner } from '../../components/ui';
+import { Button, EmptyState, ErrorBox, Input, PageHeader, SearchInput, Select, Spinner } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
-import { ATTENDANCE_LABELS, ATTENDANCE_STYLES, todayISO } from '../../lib/labels';
+import { ATTENDANCE_LABELS, ATTENDANCE_STYLES, byName, nameMatches, todayISO } from '../../lib/labels';
 
 const STATUSES: { key: AttendanceStatus; icon: typeof Check }[] = [
   { key: 'present', icon: Check },
@@ -18,6 +18,7 @@ export default function AttendancePage() {
   const [date, setDate] = useState(todayISO());
   const [category, setCategory] = useState('');
   const [rows, setRows] = useState<RollCallRow[] | null>(null);
+  const [query, setQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -63,6 +64,9 @@ export default function AttendancePage() {
   const count = (s: AttendanceStatus) => rows?.filter((r) => r.status === s).length ?? 0;
   const unmarked = rows?.filter((r) => !r.status).length ?? 0;
 
+  // The search only hides rows; the roll call is still saved for the whole session.
+  const visible = (rows ?? []).filter((r) => nameMatches(r.name, query)).sort(byName);
+
   return (
     <>
       <PageHeader
@@ -71,6 +75,7 @@ export default function AttendancePage() {
         subtitle="Un tap par joueur, puis enregistrez l'appel."
         actions={
           <>
+            <SearchInput value={query} onChange={setQuery} placeholder="Rechercher un joueur" />
             <Input type="date" value={date} max={todayISO()} onChange={(e) => setDate(e.target.value)} className="!w-auto" aria-label="Date de la séance" />
             <Select value={category} onChange={(e) => setCategory(e.target.value)} className="!w-auto" aria-label="Filtrer par catégorie">
               <option value="">Toutes catégories</option>
@@ -122,39 +127,43 @@ export default function AttendancePage() {
             </button>
           </div>
 
-          <ul className="space-y-2">
-            {rows.map((r, i) => (
-              <li
-                key={r.playerId}
-                className="flex animate-rise flex-col gap-3 border-2 border-ink/10 bg-white p-3 sm:flex-row sm:items-center sm:justify-between sm:px-5"
-                style={{ animationDelay: `${Math.min(i, 10) * 30}ms` }}
-              >
-                <div className="flex items-center gap-3">
-                  <span className={`h-10 w-1.5 shrink-0 ${r.status ? ATTENDANCE_STYLES[r.status].split(' ')[0] : 'bg-ink/10'}`} aria-hidden />
-                  <div>
-                    <p className="font-display text-2xl font-extrabold">{r.name}</p>
-                    <p className="text-xs font-bold tracking-wider text-ink/40 uppercase">{r.category}</p>
+          {visible.length === 0 ? (
+            <EmptyState>Aucun joueur ne correspond à «&nbsp;{query}&nbsp;».</EmptyState>
+          ) : (
+            <ul className="space-y-2">
+              {visible.map((r, i) => (
+                <li
+                  key={r.playerId}
+                  className="flex animate-rise flex-col gap-3 border-2 border-ink/10 bg-white p-3 sm:flex-row sm:items-center sm:justify-between sm:px-5"
+                  style={{ animationDelay: `${Math.min(i, 10) * 30}ms` }}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className={`h-10 w-1.5 shrink-0 ${r.status ? ATTENDANCE_STYLES[r.status].split(' ')[0] : 'bg-ink/10'}`} aria-hidden />
+                    <div>
+                      <p className="font-display text-2xl font-extrabold">{r.name}</p>
+                      <p className="text-xs font-bold tracking-wider text-ink/40 uppercase">{r.category}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="grid grid-cols-3 gap-1.5 sm:flex" role="radiogroup" aria-label={`Présence de ${r.name}`}>
-                  {STATUSES.map(({ key, icon: Icon }) => (
-                    <button
-                      key={key}
-                      role="radio"
-                      aria-checked={r.status === key}
-                      onClick={() => setStatus(r.playerId, key)}
-                      className={`flex min-h-11 items-center justify-center gap-1.5 px-2 text-sm font-bold tracking-wide uppercase transition-all sm:px-4 ${
-                        r.status === key ? `${ATTENDANCE_STYLES[key]} skew-tag` : 'bg-paper text-ink/50 hover:bg-ink/10 hover:text-ink'
-                      }`}
-                    >
-                      <Icon className="size-4" aria-hidden />
-                      {ATTENDANCE_LABELS[key]}
-                    </button>
-                  ))}
-                </div>
-              </li>
-            ))}
-          </ul>
+                  <div className="grid grid-cols-3 gap-1.5 sm:flex" role="radiogroup" aria-label={`Présence de ${r.name}`}>
+                    {STATUSES.map(({ key, icon: Icon }) => (
+                      <button
+                        key={key}
+                        role="radio"
+                        aria-checked={r.status === key}
+                        onClick={() => setStatus(r.playerId, key)}
+                        className={`flex min-h-11 items-center justify-center gap-1.5 px-2 text-sm font-bold tracking-wide uppercase transition-all sm:px-4 ${
+                          r.status === key ? `${ATTENDANCE_STYLES[key]} skew-tag` : 'bg-paper text-ink/50 hover:bg-ink/10 hover:text-ink'
+                        }`}
+                      >
+                        <Icon className="size-4" aria-hidden />
+                        {ATTENDANCE_LABELS[key]}
+                      </button>
+                    ))}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
 
           <div className="sticky bottom-0 mt-4 flex flex-wrap items-center justify-end gap-4 bg-paper/95 py-4 backdrop-blur">
             {message && (

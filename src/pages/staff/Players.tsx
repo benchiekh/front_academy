@@ -5,13 +5,14 @@ import { errorMessage } from '../../api/client';
 import { playersApi } from '../../api/endpoints';
 import { CATEGORIES, type Player } from '../../api/types';
 import PlayerForm from '../../components/PlayerForm';
-import { Badge, Button, DataTable, EmptyState, ErrorBox, Modal, PageHeader, Select, Spinner } from '../../components/ui';
-import { formatDay, formatMoney, refName } from '../../lib/labels';
+import { Badge, Button, DataTable, EmptyState, ErrorBox, Modal, PageHeader, SearchInput, Select, Spinner } from '../../components/ui';
+import { byName, formatDay, formatMoney, nameMatches, refName } from '../../lib/labels';
 
 export default function Players() {
   const navigate = useNavigate();
   const [players, setPlayers] = useState<Player[] | null>(null);
   const [category, setCategory] = useState('');
+  const [query, setQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
 
@@ -24,6 +25,8 @@ export default function Players() {
   };
   useEffect(load, [category]);
 
+  const visible = (players ?? []).filter((p) => nameMatches(p.name, query)).sort(byName);
+
   return (
     <>
       <PageHeader
@@ -32,6 +35,7 @@ export default function Players() {
         subtitle={players ? `${players.length} joueur${players.length > 1 ? 's' : ''}` : undefined}
         actions={
           <>
+            <SearchInput value={query} onChange={setQuery} placeholder="Rechercher un joueur" />
             <Select value={category} onChange={(e) => setCategory(e.target.value)} className="!w-auto" aria-label="Filtrer par catégorie">
               <option value="">Toutes catégories</option>
               {CATEGORIES.map((c) => (
@@ -50,7 +54,11 @@ export default function Players() {
         <EmptyState icon={<Shirt className="size-12" />}>Aucun joueur. Créez d'abord un compte parent, puis ajoutez l'enfant.</EmptyState>
       )}
 
-      {players && players.length > 0 && (
+      {players && players.length > 0 && visible.length === 0 && (
+        <EmptyState icon={<Shirt className="size-12" />}>Aucun joueur ne correspond à «&nbsp;{query}&nbsp;».</EmptyState>
+      )}
+
+      {visible.length > 0 && (
         <DataTable
           head={
             <tr>
@@ -63,7 +71,7 @@ export default function Players() {
             </tr>
           }
         >
-          {players.map((p) => (
+          {visible.map((p) => (
             <tr
               key={p._id}
               tabIndex={0}

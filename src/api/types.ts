@@ -179,3 +179,26 @@ export interface Schedule {
   content: string;
   updatedAt?: string;
 }
+
+/** Relevé de salaire/charge pour un mois donné. */
+export interface Salary {
+  _id: string;
+  name: string;
+  type: 'salary' | 'expense';
+  amount: number;
+  month: number;
+  year: number;
+  markedByName: string | null;
+  updatedAt?: string;
+}
+
+/** Item simplifié pour la liste. */
+export interface SalaryListItem {
+  _id: string;
+  name: string;
+  type: 'salary' | 'expense';
+  amount: number;
+  month: number;
+  year: number;
+  markedByName: string | null;
+}

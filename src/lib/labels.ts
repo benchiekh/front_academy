@@ -67,3 +67,12 @@ export const refName = (ref: UserRef | string | undefined) =>
   typeof ref === 'object' && ref ? ref.name : '—';
 
 export const refId = (ref: UserRef | string) => (typeof ref === 'object' ? ref._id : ref);
+
+/** A → Z on names, ignoring case and accents — the order every player/parent list uses. */
+export const byName = (a: { name: string }, b: { name: string }) =>
+  a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' });
+
+const foldName = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+/** Live list filter: substring match on a name, ignoring case and accents (so "belo" finds "Bélo"). */
+export const nameMatches = (name: string, query: string) => foldName(name).includes(foldName(query.trim()));

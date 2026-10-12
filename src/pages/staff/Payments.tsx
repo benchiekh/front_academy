@@ -1,12 +1,12 @@
-import { CalendarDays, Check, ChevronLeft, ChevronRight, CreditCard, Grid3x3, Minus, Search, X } from 'lucide-react';
+import { CalendarDays, Check, ChevronLeft, ChevronRight, CreditCard, Grid3x3, Minus, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { errorMessage } from '../../api/client';
 import { paymentsApi } from '../../api/endpoints';
 import { CATEGORIES, type Payment, type PaymentGridRow, type PaymentStatus, type PaymentYearRow } from '../../api/types';
 import { KhalesBadge } from '../../components/parent/PaymentTab';
-import { Button, cx, EmptyState, ErrorBox, Field, Input, Modal, MonthPicker, PageHeader, Select, Spinner, StatTile } from '../../components/ui';
+import { Button, cx, EmptyState, ErrorBox, Field, Input, Modal, MonthPicker, PageHeader, SearchInput, Select, Spinner, StatTile } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
-import { formatDate, formatMoney, MONTHS, MONTHS_SHORT } from '../../lib/labels';
+import { byName, formatDate, formatMoney, MONTHS, MONTHS_SHORT, nameMatches } from '../../lib/labels';
 
 type View = 'month' | 'year';
 
@@ -77,6 +77,8 @@ function MonthView({ category }: { category: string }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>('all');
   const [query, setQuery] = useState('');
+  // Résumé quotidien : aujourd'hui total + nombre de joueurs payés
+  const [todayStats, setTodayStats] = useState<{ collected: number; count: number } | null>(null);
 
   useEffect(() => {
     setRows(null);
@@ -84,6 +86,11 @@ function MonthView({ category }: { category: string }) {
     paymentsApi
       .month(month, year, category || undefined)
       .then(setRows)
+      .catch((e) => setError(errorMessage(e)));
+    // Charger les stats d'aujourd'hui (même mois/l'année que la vue courante)
+    paymentsApi
+      .day(now.getFullYear(), now.getMonth() + 1, now.getDate())
+      .then(setTodayStats)
       .catch((e) => setError(errorMessage(e)));
   }, [month, year, category]);
 
@@ -114,9 +121,9 @@ function MonthView({ category }: { category: string }) {
   const expected = rows?.reduce((s, r) => s + r.amount, 0) ?? 0;
   const counts = { all: rows?.length ?? 0, paid: paid.length, unpaid: (rows?.length ?? 0) - paid.length };
 
-  const visible = (rows ?? []).filter(
-    (r) => (filter === 'all' || r.status === filter) && r.name.toLowerCase().includes(query.trim().toLowerCase()),
-  );
+  const visible = (rows ?? [])
+    .filter((r) => (filter === 'all' || r.status === filter) && nameMatches(r.name, query))
+    .sort(byName);
 
   const FILTERS: { key: Filter; label: string; tone: string }[] = [
     { key: 'all', label: 'Tous', tone: 'bg-ink text-white' },
@@ -129,6 +136,14 @@ function MonthView({ category }: { category: string }) {
       <div className="mb-6">
         <MonthPicker month={month} year={year} labels={MONTHS} onChange={(m, y) => { setMonth(m); setYear(y); }} />
       </div>
+      {/* Résumé quotidien */}
+      {isAdmin && todayStats && (
+        <StatTile
+          label="Aujourd'hui"
+          value={`${todayStats.count} joueur(s) · ${formatMoney(todayStats.collected)} DT`}
+          tone="ink"
+        />
+      )}
       <ErrorBox message={error} />
       {!rows && !error && <Spinner />}
       {rows?.length === 0 && <EmptyState icon={<CreditCard className="size-12" />}>Aucun joueur actif dans cette sélection.</EmptyState>}
@@ -168,10 +183,7 @@ function MonthView({ category }: { category: string }) {
                 </button>
               ))}
             </div>
-            <div className="relative sm:w-64">
-              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-ink/35" aria-hidden />
-              <Input type="search" placeholder="Rechercher un joueur" value={query} onChange={(e) => setQuery(e.target.value)} className="pl-9" aria-label="Rechercher un joueur" />
-            </div>
+            <SearchInput value={query} onChange={setQuery} placeholder="Rechercher un joueur" />
           </div>
 
           {visible.length === 0 ? (
@@ -223,6 +235,7 @@ function YearView({ category }: { category: string }) {
   const [rows, setRows] = useState<PaymentYearRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
   const [payTarget, setPayTarget] = useState<{ row: PaymentYearRow; monthIdx: number } | null>(null);
 
   useEffect(() => {
@@ -240,6 +253,9 @@ function YearView({ category }: { category: string }) {
   const isRegistered = (r: PaymentYearRow, m: number) => year * 12 + m >= r.since.year * 12 + r.since.month;
   const owes = (r: PaymentYearRow, m: number) => isDue(m) && isRegistered(r, m);
   const isCurrent = (m: number) => year === now.getFullYear() && m === now.getMonth() + 1;
+
+  // The search only hides rows; the totals above and below always cover the whole selection.
+  const visible = (rows ?? []).filter((r) => nameMatches(r.name, query)).sort(byName);
 
   const applySaved = (playerId: string, monthIdx: number, saved: Payment) =>
     setRows((rs) =>
@@ -342,6 +358,7 @@ function YearView({ category }: { category: string }) {
             <ChevronRight className="size-5" />
           </button>
         </div>
+        <SearchInput value={query} onChange={setQuery} placeholder="Rechercher un joueur" />
         <Legend />
       </div>
 
@@ -391,7 +408,14 @@ function YearView({ category }: { category: string }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-ink/5">
-                {rows.map((r) => {
+                {visible.length === 0 && (
+                  <tr>
+                    <td colSpan={14} className="px-4 py-10 text-center text-ink/50">
+                      Aucun joueur ne correspond à «&nbsp;{query}&nbsp;».
+                    </td>
+                  </tr>
+                )}
+                {visible.map((r) => {
                   const paidCount = r.months.filter((c) => c?.status === 'paid').length;
                   const dueCount = MONTHS.filter((_, i) => owes(r, i + 1)).length;
                   return (

@@ -3,6 +3,7 @@ import { errorMessage } from '../api/client';
 import { usersApi, type PlayerInput } from '../api/endpoints';
 import { CATEGORIES, type Category, type User } from '../api/types';
 import { Button, ErrorBox, Field, Input, Select } from './ui';
+import { byName } from '../lib/labels';
 
 export default function PlayerForm({
   initial,
@@ -28,7 +29,7 @@ export default function PlayerForm({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    usersApi.list('parent').then(setParents).catch(() => undefined);
+    usersApi.list('parent').then((list) => setParents([...list].sort(byName))).catch(() => undefined);
   }, []);
 
   const submit = async (e: FormEvent) => {

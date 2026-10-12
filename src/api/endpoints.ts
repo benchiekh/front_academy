@@ -16,6 +16,7 @@ import type {
   Schedule,
   TechnicalSheet,
   User,
+  Salary,
 } from './types';
 
 export const authApi = {
@@ -97,12 +98,24 @@ export const paymentsApi = {
     amount?: number;
     paymentDate?: string;
   }) => api.put<Payment>('/payments', data).then((r) => r.data),
+  day: (year?: number, month?: number, day?: number) =>
+    api.get<{ year: number; month: number; day: number; collected: number; count: number }>('/payments/day', { params: { year, month, day } }).then((r) => r.data),
 };
 
 export const scheduleApi = {
   /** Public — no token needed (login page). */
   get: () => api.get<Schedule>('/schedule').then((r) => r.data),
   update: (content: string) => api.put<Schedule>('/schedule', { content }).then((r) => r.data),
+};
+
+export const salariesApi = {
+  list: (month?: number, year?: number) =>
+    api
+      .get<Salary[]>('/salaries', { params: { month, year } })
+      .then((r) => r.data),
+  upsert: (data: { id?: string; name: string; type: 'salary' | 'expense'; amount: number; month: number; year: number }) =>
+    api.put<Salary>('/salaries', data).then((r) => r.data),
+  remove: (id: string) => api.delete(`/salaries/${id}`),
 };
 
 export interface ActivityQuery {

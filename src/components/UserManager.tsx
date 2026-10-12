@@ -3,7 +3,8 @@ import { errorMessage } from '../api/client';
 import { usersApi } from '../api/endpoints';
 import type { User } from '../api/types';
 import { Copy, KeyRound, Pencil, Trash2, UserPlus, Users } from 'lucide-react';
-import { Button, DataTable, EmptyState, ErrorBox, Field, Input, Modal, PageHeader, Spinner } from './ui';
+import { Button, DataTable, EmptyState, ErrorBox, Field, Input, Modal, PageHeader, SearchInput, Spinner } from './ui';
+import { byName, nameMatches } from '../lib/labels';
 
 const COPY = {
   parent: { title: 'Parents', singular: 'parent', subtitle: 'Créez les accès des parents et remettez-leur leurs identifiants.' },
@@ -14,6 +15,7 @@ const COPY = {
 export default function UserManager({ role }: { role: 'parent' | 'coach' }) {
   const copy = COPY[role];
   const [users, setUsers] = useState<User[] | null>(null);
+  const [query, setQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', phone: '', password: '' });
@@ -30,6 +32,8 @@ export default function UserManager({ role }: { role: 'parent' | 'coach' }) {
   useEffect(() => {
     load();
   }, [role]);
+
+  const visible = (users ?? []).filter((u) => nameMatches(u.name, query)).sort(byName);
 
   const onCreate = async (e: FormEvent) => {
     e.preventDefault();
@@ -111,9 +115,12 @@ export default function UserManager({ role }: { role: 'parent' | 'coach' }) {
         title={copy.title}
         subtitle={copy.subtitle}
         actions={
-          <Button onClick={() => { setFormError(null); setOpen(true); }}>
-            <UserPlus className="size-5" aria-hidden /> Nouveau {copy.singular}
-          </Button>
+          <>
+            <SearchInput value={query} onChange={setQuery} placeholder={`Rechercher un ${copy.singular}`} />
+            <Button onClick={() => { setFormError(null); setOpen(true); }}>
+              <UserPlus className="size-5" aria-hidden /> Nouveau {copy.singular}
+            </Button>
+          </>
         }
       />
 
@@ -151,8 +158,11 @@ export default function UserManager({ role }: { role: 'parent' | 'coach' }) {
       <ErrorBox message={error} />
       {!users && !error && <Spinner />}
       {users?.length === 0 && <EmptyState icon={<Users className="size-12" />}>Aucun {copy.singular} pour le moment.</EmptyState>}
+      {users && users.length > 0 && visible.length === 0 && (
+        <EmptyState icon={<Users className="size-12" />}>Aucun {copy.singular} ne correspond à «&nbsp;{query}&nbsp;».</EmptyState>
+      )}
 
-      {users && users.length > 0 && (
+      {visible.length > 0 && (
         <DataTable
           head={
             <tr>
@@ -163,7 +173,7 @@ export default function UserManager({ role }: { role: 'parent' | 'coach' }) {
             </tr>
           }
         >
-          {users.map((u) => (
+          {visible.map((u) => (
             <tr key={u._id} className="transition-colors hover:bg-blaze-50">
               <td className="font-display text-xl font-extrabold whitespace-nowrap">{u.name}</td>
               <td className="text-ink/70">{u.email}</td>
