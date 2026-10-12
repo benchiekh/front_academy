@@ -70,6 +70,8 @@ function MonthView({ category }: { category: string }) {
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year, setYear] = useState(now.getFullYear());
+  // A future month has nothing due yet (no "reste à encaisser").
+  const isFuture = year > now.getFullYear() || (year === now.getFullYear() && month > now.getMonth() + 1);
   const [rows, setRows] = useState<PaymentGridRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -137,7 +139,12 @@ function MonthView({ category }: { category: string }) {
             <div className="mb-6 grid grid-cols-3 gap-3">
               <StatTile label="Payé" value={`${counts.paid}/${counts.all}`} tone="win" />
               <StatTile label="Encaissé" value={formatMoney(collected)} tone="ink" hint={`sur ${formatMoney(expected)}`} />
-              <StatTile label="Reste" value={formatMoney(expected - collected)} tone="loss" />
+              <StatTile
+                label="Reste"
+                value={formatMoney(isFuture ? 0 : expected - collected)}
+                tone="loss"
+                hint={isFuture ? 'mois à venir — rien à encaisser' : undefined}
+              />
             </div>
           )}
 
