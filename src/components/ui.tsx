@@ -181,6 +181,39 @@ export function Spinner({ label = 'Chargement…' }: { label?: string }) {
   );
 }
 
+/**
+ * Bouncing handball with its shadow — shown while a slow request is in flight
+ * (e.g. the backend waking up from a cold start). `onDark` switches the label
+ * to a light colour for use on the ink/photo backgrounds.
+ */
+export function BallLoader({ label, onDark = false, className }: { label?: string; onDark?: boolean; className?: string }) {
+  return (
+    <div className={cx('flex flex-col items-center justify-center gap-4 py-10 text-center', className)} role="status" aria-live="polite">
+      <span className="relative flex h-14 w-24 items-end justify-center">
+        <span className="animate-ball relative z-10 size-11 rounded-full bg-blaze shadow-[inset_-7px_-7px_0_0_rgba(0,0,0,0.22),inset_5px_5px_0_0_rgba(255,255,255,0.22)]">
+          <span className="absolute inset-0 overflow-hidden rounded-full" aria-hidden>
+            <span className="absolute top-1/2 left-0 h-[2px] w-full -translate-y-1/2 rotate-[12deg] bg-ink/25" />
+            <span className="absolute top-1/2 left-1/2 h-[2px] w-full -translate-x-1/2 -translate-y-1/2 -rotate-[12deg] bg-ink/20" />
+          </span>
+        </span>
+        <span className="animate-ball-shadow absolute bottom-0 h-2 w-14 rounded-full bg-ink/45 blur-[1.5px]" aria-hidden />
+      </span>
+      {label && (
+        <p className={cx('text-sm font-bold tracking-[0.15em] uppercase', onDark ? 'text-white/75' : 'text-ink/55')}>{label}</p>
+      )}
+    </div>
+  );
+}
+
+/** Small inline ball for buttons (gently bobbing). */
+export function BallMark({ className }: { className?: string }) {
+  return (
+    <span className={cx('relative inline-block size-5 shrink-0 overflow-hidden rounded-full bg-white shadow-[inset_-3px_-3px_0_0_rgba(0,0,0,0.12)]', className)} aria-hidden>
+      <span className="absolute top-1/2 left-0 h-[1.5px] w-full -translate-y-1/2 rotate-[12deg] bg-blaze" />
+    </span>
+  );
+}
+
 export function ErrorBox({ message }: { message: string | null }) {
   if (!message) return null;
   return (

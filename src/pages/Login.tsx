@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { errorMessage } from '../api/client';
 import { Logo } from '../components/Logo';
 import ScheduleCard from '../components/ScheduleCard';
-import { Button, ErrorBox, Field, Input, Kicker } from '../components/ui';
+import { BallMark, Button, ErrorBox, Field, Input, Kicker } from '../components/ui';
 import { homeFor, useAuth } from '../context/AuthContext';
 
 export default function Login() {
@@ -51,7 +51,7 @@ export default function Login() {
           <div>
             <Kicker>Espace membres</Kicker>
             <h2 className="mt-2 font-display text-5xl font-black">Connexion</h2>
-            <p className="mt-2 text-ink/60">Coachs, administration et parents..</p>
+            <p className="mt-2 text-ink/60">Coachs, administration et parents.</p>
           </div>
 
           <ErrorBox message={error} />
@@ -77,8 +77,19 @@ export default function Login() {
           </Field>
 
           <Button type="submit" className="w-full text-xl" disabled={loading}>
-            {loading ? 'Connexion…' : 'Entrer sur le terrain'}
-            {!loading && <ArrowRight className="size-5" aria-hidden />}
+            {loading ? (
+              <>
+                <span className="animate-ball-bob inline-flex">
+                  <BallMark />
+                </span>
+                Connexion…
+              </>
+            ) : (
+              <>
+                Entrer sur le terrain
+                <ArrowRight className="size-5" aria-hidden />
+              </>
+            )}
           </Button>
 
           <p className="border-l-4 border-volt bg-white px-4 py-3 text-sm text-ink/70">
