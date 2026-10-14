@@ -51,7 +51,7 @@ export default function Login() {
           <div>
             <Kicker>Espace membres</Kicker>
             <h2 className="mt-2 font-display text-5xl font-black">Connexion</h2>
-            <p className="mt-2 text-ink/60">Coachs, administration et parents.</p>
+            <p className="mt-2 text-ink/60">Coachs, administration et parents..</p>
           </div>
 
           <ErrorBox message={error} />
